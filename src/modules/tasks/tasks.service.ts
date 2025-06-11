@@ -7,6 +7,7 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { TaskStatus } from './enums/task-status.enum';
+import { TaskFilterDto } from './dto/task-filter.dto';
 
 @Injectable()
 export class TasksService {
@@ -32,12 +33,37 @@ export class TasksService {
     return savedTask;
   }
 
-  async findAll(): Promise<Task[]> {
-    // Inefficient implementation: retrieves all tasks without pagination
-    // and loads all relations, causing potential performance issues
-    return this.tasksRepository.find({
-      relations: ['user'],
-    });
+  async findAll(taskFilterDto: TaskFilterDto): Promise<{ data: Task[]; count: number }> {
+    // extraction all the properties passed in the query
+    const { endDate, limit, page, priority, search, startDate, status, userId } = taskFilterDto;
+    const query = this.tasksRepository.createQueryBuilder('task');
+    if (search && search !== '') {
+      query.andWhere('(task.title ILIKE :search OR task.description ILIKE :search)', {
+        search: `%${search}%`,
+      });
+    }
+    if (status) {
+      query.andWhere(`task.status = :status`, { status });
+    }
+    if (userId) {
+      query.andWhere(`task.userId = :userId`, { userId });
+    }
+    if (priority) {
+      query.andWhere(`task.priority = :priority`, { priority });
+    }
+    if (startDate) {
+      query.andWhere(`task.dueDate >= :startDate`, { startDate });
+    }
+    if (endDate) {
+      query.andWhere(`task.dueDate >= :endDate`, { endDate });
+    }
+    if (page && limit) {
+      const skip = (page - 1) * limit;
+      query.skip(skip).take(limit);
+    }
+
+    const [data, count] = await query.getManyAndCount();
+    return { data, count };
   }
 
   async findOne(id: string): Promise<Task> {
