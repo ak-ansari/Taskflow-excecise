@@ -1,6 +1,6 @@
 import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, Repository } from 'typeorm';
+import { DataSource, FindManyOptions, In, LessThan, Repository } from 'typeorm';
 import { Task } from './entities/task.entity';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
@@ -171,5 +171,18 @@ export class TasksService {
   async batchRemove(taskIds: string[]): Promise<number | undefined | null> {
     const result = await this.tasksRepository.delete({ id: In(taskIds) });
     return result.affected;
+  }
+  getOverdueTasks(options?: { page: number; limit: number }) {
+    const query: FindManyOptions<Task> = {
+      where: {
+        dueDate: LessThan(new Date()),
+        status: TaskStatus.PENDING,
+      },
+    };
+    if (options?.page && options?.limit) {
+      query.take = options.limit;
+      query.skip = (options.page - 1) * options.limit;
+    }
+    return this.tasksRepository.find(query);
   }
 }
