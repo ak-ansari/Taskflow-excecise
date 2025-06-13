@@ -29,9 +29,6 @@ export class OverdueTasksService {
     // 1. Find all tasks that are overdue (due date is in the past)
     // 2. Add them to the task processing queue
     // 3. Log the number of overdue tasks found
-
-    // Example implementation (incomplete - to be implemented by candidates)
-    const now = new Date();
     const overdueTasks = await this.taskService.getOverdueTasks();
 
     this.logger.log(`Found ${overdueTasks.length} overdue tasks`);

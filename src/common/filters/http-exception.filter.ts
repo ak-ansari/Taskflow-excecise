@@ -1,4 +1,11 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException, Logger } from '@nestjs/common';
+import {
+  ExceptionFilter,
+  Catch,
+  ArgumentsHost,
+  HttpException,
+  Logger,
+  HttpStatus,
+} from '@nestjs/common';
 import { Request, Response } from 'express';
 
 @Catch(HttpException)
@@ -9,28 +16,45 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
-    const status = exception.getStatus();
+    const status = exception.getStatus ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
     const exceptionResponse = exception.getResponse();
 
-    // TODO: Implement comprehensive error handling
-    // This filter should:
-    // 1. Log errors appropriately based on their severity
-    // 2. Format error responses in a consistent way
-    // 3. Include relevant error details without exposing sensitive information
-    // 4. Handle different types of errors with appropriate status codes
+    // Determine error message and details
+    let message = 'An unexpected error occurred';
+    let errorDetails: any = {};
 
-    this.logger.error(
-      `HTTP Exception: ${exception.message}`,
-      exception.stack,
-    );
+    if (typeof exceptionResponse === 'string') {
+      message = exceptionResponse;
+    } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+      message = (exceptionResponse as any).message || exception.message || message;
+      errorDetails = { ...(exceptionResponse as object) };
+      delete errorDetails.message;
+      delete errorDetails.statusCode;
+    } else {
+      message = exception.message || message;
+    }
 
-    // Basic implementation (to be enhanced by candidates)
+    // Log error with appropriate severity
+    if (status >= 500) {
+      this.logger.error(
+        `HTTP ${status} Error: ${message}`,
+        exception.stack,
+        HttpExceptionFilter.name,
+      );
+    } else if (status >= 400) {
+      this.logger.warn(`HTTP ${status} Warning: ${message}`, HttpExceptionFilter.name);
+    } else {
+      this.logger.log(`HTTP ${status}: ${message}`, HttpExceptionFilter.name);
+    }
+
+    // Consistent error response
     response.status(status).json({
       success: false,
       statusCode: status,
-      message: exception.message,
+      message,
+      ...(Object.keys(errorDetails).length > 0 ? { details: errorDetails } : {}),
       path: request.url,
       timestamp: new Date().toISOString(),
     });
   }
-} 
+}
