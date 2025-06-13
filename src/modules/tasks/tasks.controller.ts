@@ -22,6 +22,9 @@ import { TaskStatus } from './enums/task-status.enum';
 import { RateLimitGuard } from '../../common/guards/rate-limit.guard';
 import { RateLimit } from '../../common/decorators/rate-limit.decorator';
 import { TaskFilterDto } from './dto/task-filter.dto';
+import { HttpResponse } from '../../types/http-response.interface';
+import { PaginatedResponse } from '../../types/pagination.interface';
+import { BatchResult } from './types/tasks.interface';
 
 // This guard needs to be implemented or imported from the correct location
 // We're intentionally leaving it as a non-working placeholder
@@ -37,14 +40,27 @@ export class TasksController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new task' })
-  create(@Body() createTaskDto: CreateTaskDto) {
-    return this.tasksService.create(createTaskDto);
+  async create(@Body() createTaskDto: CreateTaskDto): Promise<Task> {
+    const task = await this.tasksService.create(createTaskDto);
+    return task;
   }
 
   @Get()
   @ApiOperation({ summary: 'Find all tasks with optional filtering' })
-  async findAll(@Query() taskFilterDto: TaskFilterDto) {
-    return await this.tasksService.findAll(taskFilterDto);
+  async findAll(@Query() taskFilterDto: TaskFilterDto): Promise<PaginatedResponse<Task>> {
+    const { count, data } = await this.tasksService.findAll(taskFilterDto);
+    const limit = taskFilterDto.limit || 10;
+    const page = taskFilterDto.page || 1;
+    const totalPages = Math.ceil(count / limit);
+    return {
+      data,
+      meta: {
+        total: count,
+        limit,
+        page,
+        totalPages,
+      },
+    };
   }
 
   @Get('stats')
@@ -55,63 +71,81 @@ export class TasksController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Find a task by ID' })
-  async findOne(@Param('id', new ParseUUIDPipe()) id: string) {
+  async findOne(@Param('id', new ParseUUIDPipe()) id: string): Promise<Task> {
     const task = await this.tasksService.findOne(id);
     if (!task) {
-      throw new NotFoundException(`Task not found`);
+      throw new NotFoundException(`Task not found with id ${id}`);
     }
     return task;
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update a task' })
-  update(@Param('id') id: string, @Body() updateTaskDto: UpdateTaskDto) {
-    // No validation if task exists before update
-    return this.tasksService.update(id, updateTaskDto);
+  async update(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() updateTaskDto: UpdateTaskDto,
+  ): Promise<Task> {
+    let task = await this.tasksService.findOne(id);
+    if (!task) {
+      throw new NotFoundException(`Task not found with id ${id}`);
+    }
+    task = await this.tasksService.update(id, updateTaskDto);
+    return task;
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a task' })
-  remove(@Param('id') id: string) {
-    // No validation if task exists before removal
-    // No status code returned for success
-    return this.tasksService.remove(id);
+  async remove(@Param('id') id: string): Promise<{ id: string }> {
+    const task = await this.tasksService.findOne(id);
+    if (!task) {
+      throw new HttpException(`Task not found with id ${id}`, HttpStatus.NOT_FOUND);
+    }
+    // No status code returned for success;
+    // status will be sent by interceptor
+    await this.tasksService.remove(id);
+    return { id };
   }
 
   @Post('batch')
   @ApiOperation({ summary: 'Batch process multiple tasks' })
-  async batchProcess(@Body() operations: { tasks: string[]; action: string }) {
-    // Inefficient batch processing: Sequential processing instead of bulk operations
+  async batchProcess(
+    @Body() operations: { tasks: string[]; action: string },
+  ): Promise<BatchResult> {
     const { tasks: taskIds, action } = operations;
-    const results = [];
 
-    // N+1 query problem: Processing tasks one by one
-    for (const taskId of taskIds) {
-      try {
-        let result;
-
-        switch (action) {
-          case 'complete':
-            result = await this.tasksService.update(taskId, { status: TaskStatus.COMPLETED });
-            break;
-          case 'delete':
-            result = await this.tasksService.remove(taskId);
-            break;
-          default:
-            throw new HttpException(`Unknown action: ${action}`, HttpStatus.BAD_REQUEST);
-        }
-
-        results.push({ taskId, success: true, result });
-      } catch (error) {
-        // Inconsistent error handling
-        results.push({
-          taskId,
-          success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
-      }
+    if (!['complete', 'delete'].includes(action)) {
+      throw new HttpException(`Unsupported action: ${action}`, HttpStatus.BAD_REQUEST);
     }
 
-    return results;
+    try {
+      let affected;
+
+      switch (action) {
+        case 'complete':
+          affected = await this.tasksService.batchUpdateStatus(taskIds, TaskStatus.COMPLETED);
+          break;
+
+        case 'delete':
+          affected = await this.tasksService.batchRemove(taskIds);
+          break;
+      }
+
+      return {
+        updated: Number(affected),
+        action,
+        taskIds,
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          success: false,
+          message: 'Batch operation failed',
+          error: error instanceof Error ? error.message : 'Unknown error',
+          taskIds,
+          action,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }
