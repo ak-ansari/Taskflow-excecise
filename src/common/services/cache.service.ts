@@ -4,7 +4,7 @@ import type { Cache } from 'cache-manager';
 
 @Injectable()
 export class CacheService {
-  private readonly namespacePrefix = 'app:'; // Optional namespace for keys
+  private readonly namespacePrefix = 'app:';
 
   constructor(@Inject(CACHE_MANAGER) private readonly cacheManager: Cache) {}
 
