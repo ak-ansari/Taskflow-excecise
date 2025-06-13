@@ -31,7 +31,7 @@ export class OverdueTasksService {
 
     // Example implementation (incomplete - to be implemented by candidates)
     const now = new Date();
-    const overdueTasks = await this.tasksRepository.find({
+    const overdueTasks: Task[] = await this.tasksRepository.find({
       where: {
         dueDate: LessThan(now),
         status: TaskStatus.PENDING,
