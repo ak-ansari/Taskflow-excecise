@@ -13,7 +13,6 @@ import {
   NotFoundException,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -24,6 +23,8 @@ import { RateLimit } from '../../common/decorators/rate-limit.decorator';
 import { TaskFilterDto } from './dto/task-filter.dto';
 import { PaginatedResponse } from '../../types/pagination.interface';
 import { BatchResult } from './types/tasks.interface';
+import { TaskQueryService } from './services/task-query.service';
+import { TaskCommandService } from './services/task-command.service';
 
 // This guard needs to be implemented or imported from the correct location
 // We're intentionally leaving it as a non-working placeholder
@@ -35,19 +36,22 @@ class JwtAuthGuard {}
 @RateLimit({ limit: 100, windowMs: 60000 })
 @ApiBearerAuth()
 export class TasksController {
-  constructor(private readonly tasksService: TasksService) {}
+  constructor(
+    private readonly tasksQueryService: TaskQueryService,
+    private readonly tasksCommandService: TaskCommandService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new task' })
   async create(@Body() createTaskDto: CreateTaskDto): Promise<Task> {
-    const task = await this.tasksService.create(createTaskDto);
+    const task = await this.tasksCommandService.create(createTaskDto);
     return task;
   }
 
   @Get()
   @ApiOperation({ summary: 'Find all tasks with optional filtering' })
   async findAll(@Query() taskFilterDto: TaskFilterDto): Promise<PaginatedResponse<Task>> {
-    const { count, data } = await this.tasksService.findAll(taskFilterDto);
+    const { count, data } = await this.tasksQueryService.findAll(taskFilterDto);
     const limit = taskFilterDto.limit || 10;
     const page = taskFilterDto.page || 1;
     const totalPages = Math.ceil(count / limit);
@@ -65,13 +69,13 @@ export class TasksController {
   @Get('stats')
   @ApiOperation({ summary: 'Get task statistics' })
   async getStats() {
-    return this.tasksService.getStatics();
+    return this.tasksQueryService.getStatics();
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Find a task by ID' })
   async findOne(@Param('id', new ParseUUIDPipe()) id: string): Promise<Task> {
-    const task = await this.tasksService.findOne(id);
+    const task = await this.tasksQueryService.findOne(id);
     if (!task) {
       throw new NotFoundException(`Task not found with id ${id}`);
     }
@@ -84,24 +88,24 @@ export class TasksController {
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() updateTaskDto: UpdateTaskDto,
   ): Promise<Task> {
-    let task = await this.tasksService.findOne(id);
+    let task = await this.tasksQueryService.findOne(id);
     if (!task) {
       throw new NotFoundException(`Task not found with id ${id}`);
     }
-    task = await this.tasksService.update(id, updateTaskDto);
+    task = await this.tasksCommandService.update(id, updateTaskDto);
     return task;
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a task' })
   async remove(@Param('id') id: string): Promise<{ id: string }> {
-    const task = await this.tasksService.findOne(id);
+    const task = await this.tasksQueryService.findOne(id);
     if (!task) {
       throw new HttpException(`Task not found with id ${id}`, HttpStatus.NOT_FOUND);
     }
     // No status code returned for success;
     // status will be sent by interceptor
-    await this.tasksService.remove(id);
+    await this.tasksCommandService.remove(id);
     return { id };
   }
 
@@ -121,11 +125,14 @@ export class TasksController {
 
       switch (action) {
         case 'complete':
-          affected = await this.tasksService.batchUpdateStatus(taskIds, TaskStatus.COMPLETED);
+          affected = await this.tasksCommandService.batchUpdateStatus(
+            taskIds,
+            TaskStatus.COMPLETED,
+          );
           break;
 
         case 'delete':
-          affected = await this.tasksService.batchRemove(taskIds);
+          affected = await this.tasksCommandService.batchRemove(taskIds);
           break;
       }
 

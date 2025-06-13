@@ -3,10 +3,8 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThan, Repository } from 'typeorm';
 import { Task } from '../../modules/tasks/entities/task.entity';
-import { TaskStatus } from '../../modules/tasks/enums/task-status.enum';
-import { TasksService } from '@modules/tasks/tasks.service';
+import { TaskQueryService } from '@modules/tasks/services/task-query.service';
 
 @Injectable()
 export class OverdueTasksService {
@@ -16,7 +14,7 @@ export class OverdueTasksService {
     @InjectQueue('task-processing')
     private taskQueue: Queue,
     @InjectRepository(Task)
-    private taskService: TasksService,
+    private taskQueryService: TaskQueryService,
   ) {}
 
   // TODO: Implement the overdue tasks checker
@@ -29,7 +27,7 @@ export class OverdueTasksService {
     // 1. Find all tasks that are overdue (due date is in the past)
     // 2. Add them to the task processing queue
     // 3. Log the number of overdue tasks found
-    const overdueTasks = await this.taskService.getOverdueTasks();
+    const overdueTasks = await this.taskQueryService.getOverdueTasks();
 
     this.logger.log(`Found ${overdueTasks.length} overdue tasks`);
 

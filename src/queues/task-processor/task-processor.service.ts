@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
-import { TasksService } from '../../modules/tasks/tasks.service';
+import { TaskQueryService } from '@modules/tasks/services/task-query.service';
+import { TaskCommandService } from '@modules/tasks/services/task-command.service';
 
 const DEFAULT_BATCH_SIZE = 10;
 const DEFAULT_MAX_RETRIES = 3;
@@ -13,7 +14,10 @@ const VALID_STATUSES = ['pending', 'in-progress', 'completed', 'overdue']; // Ex
 export class TaskProcessorService extends WorkerHost {
   private readonly logger = new Logger(TaskProcessorService.name);
 
-  constructor(private readonly tasksService: TasksService) {
+  constructor(
+    private readonly tasksQueryService: TaskQueryService,
+    private readonly tasksCommandService: TaskCommandService,
+  ) {
     super();
   }
 
@@ -89,7 +93,7 @@ export class TaskProcessorService extends WorkerHost {
     // Transaction handling placeholder (implement with your DB/ORM)
     try {
       // await this.tasksService.startTransaction();
-      const task = await this.tasksService.updateStatus(taskId, status);
+      const task = await this.tasksCommandService.updateStatus(taskId, status);
       // await this.tasksService.commitTransaction();
 
       return {
@@ -122,7 +126,7 @@ export class TaskProcessorService extends WorkerHost {
       let processedCount = 0;
 
       while (hasMore) {
-        const overdueTasks = await this.tasksService.getOverdueTasks({ page, limit });
+        const overdueTasks = await this.tasksQueryService.getOverdueTasks({ page, limit });
         if (!overdueTasks || overdueTasks.length === 0) {
           hasMore = false;
           break;
