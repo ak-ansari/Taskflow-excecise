@@ -41,7 +41,12 @@ export class OverdueTasksService {
     this.logger.log(`Found ${overdueTasks.length} overdue tasks`);
 
     // Add tasks to the queue to be processed
+    const mappedTasks = overdueTasks.map(task => ({
+      name: 'overdue-tasks-notification',
+      data: task,
+    }));
     // TODO: Implement adding tasks to the queue
+    await this.taskQueue.addBulk(mappedTasks);
 
     this.logger.debug('Overdue tasks check completed');
   }

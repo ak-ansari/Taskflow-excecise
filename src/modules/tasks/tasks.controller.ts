@@ -22,7 +22,6 @@ import { TaskStatus } from './enums/task-status.enum';
 import { RateLimitGuard } from '../../common/guards/rate-limit.guard';
 import { RateLimit } from '../../common/decorators/rate-limit.decorator';
 import { TaskFilterDto } from './dto/task-filter.dto';
-import { HttpResponse } from '../../types/http-response.interface';
 import { PaginatedResponse } from '../../types/pagination.interface';
 import { BatchResult } from './types/tasks.interface';
 
