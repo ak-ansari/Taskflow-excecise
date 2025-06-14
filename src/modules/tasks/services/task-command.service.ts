@@ -32,7 +32,7 @@ export class TaskCommandService {
       await this.taskQueue.add('task-status-update', {
         taskId: savedTask.id,
         status: savedTask.status,
-      });
+      }, {});
 
       await queryRunner.commitTransaction();
       return savedTask;

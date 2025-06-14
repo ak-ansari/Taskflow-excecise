@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -27,6 +28,7 @@ export class Task {
     enum: TaskStatus,
     default: TaskStatus.PENDING,
   })
+  @Index()
   status: TaskStatus;
 
   @Column({
@@ -34,11 +36,13 @@ export class Task {
     enum: TaskPriority,
     default: TaskPriority.MEDIUM,
   })
+  @Index()
   priority: TaskPriority;
 
   @Column({ name: 'due_date', nullable: true })
   dueDate: Date;
 
+  @Index()
   @Column({ name: 'user_id' })
   userId: string;
 
