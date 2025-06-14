@@ -20,7 +20,7 @@ export class UserRepository implements IUsersRepository {
     await this.repo.delete({ id });
     return;
   }
-  save(user: CreateUserDto): Promise<User | null> {
+  save(user: CreateUserDto): Promise<User> {
     const createdUser = this.repo.create(user);
     return this.repo.save(createdUser);
   }
