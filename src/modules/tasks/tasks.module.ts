@@ -8,6 +8,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-ioredis';
 import { TaskCommandService } from './services/task-command.service';
 import { TaskQueryService } from './services/task-query.service';
+import { TaskRepository } from './repository/tasks.repository';
 
 @Module({
   imports: [
@@ -25,7 +26,12 @@ import { TaskQueryService } from './services/task-query.service';
     }),
   ],
   controllers: [TasksController],
-  providers: [TaskCommandService, TaskQueryService, CacheService],
+  providers: [
+    TaskCommandService,
+    TaskQueryService,
+    CacheService,
+    { provide: 'TasksRepository', useClass: TaskRepository },
+  ],
   exports: [TaskCommandService, TaskQueryService],
 })
 export class TasksModule {}

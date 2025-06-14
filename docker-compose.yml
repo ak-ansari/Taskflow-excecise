@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: taskflow_postgres
+    restart: unless-stopped
+    ports:
+      - '5432:5432'                  # Host:Container port mapping
+    environment:
+      POSTGRES_USER: admin        # Change as needed
+      POSTGRES_PASSWORD: admin    # Change as needed
+      POSTGRES_DB: taskflow            # Default database
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

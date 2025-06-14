@@ -1,18 +1,18 @@
 import { InjectQueue } from '@nestjs/bullmq';
-import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { HttpException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Queue } from 'bullmq';
-import { Repository, DataSource, In } from 'typeorm';
+import { DataSource, In } from 'typeorm';
 import { CreateTaskDto } from '../dto/create-task.dto';
 import { UpdateTaskDto } from '../dto/update-task.dto';
 import { Task } from '../entities/task.entity';
 import { TaskStatus } from '../enums/task-status.enum';
+import { ITaskRepository } from '../types/tasks-repositoy.interface';
 
 @Injectable()
 export class TaskCommandService {
   constructor(
-    @InjectRepository(Task)
-    private tasksRepository: Repository<Task>,
+    @Inject('TaskRepository')
+    private tasksRepository: ITaskRepository,
     @InjectQueue('task-processing')
     private taskQueue: Queue,
     private dataSource: DataSource,
@@ -32,7 +32,7 @@ export class TaskCommandService {
       await this.taskQueue.add('task-status-update', {
         taskId: savedTask.id,
         status: savedTask.status,
-      }, {});
+      });
 
       await queryRunner.commitTransaction();
       return savedTask;
@@ -73,32 +73,29 @@ export class TaskCommandService {
   }
 
   async remove(id: string): Promise<void> {
-    const result = await this.tasksRepository.delete(id);
+    const result = await this.tasksRepository.deleteById(id);
 
-    if (result.affected === 0) {
+    if (result === 0) {
       throw new NotFoundException(`Task with ID ${id} not found`);
     }
   }
 
   async updateStatus(id: string, status: string): Promise<Task> {
     // This method will be called by the task processor
-    const task = await this.tasksRepository.findOne({
-      where: { id },
-      relations: ['user'],
-    });
+    const task = await this.tasksRepository.findOneById(id);
     if (!task) {
       throw new NotFoundException(`Task With Id ${id} not found`);
     }
     task.status = status as TaskStatus;
-    return this.tasksRepository.save(task);
+    return this.tasksRepository.create(task);
   }
 
   async batchUpdateStatus(taskIds: string[], status: TaskStatus): Promise<number | undefined> {
-    const result = await this.tasksRepository.update({ id: In(taskIds) }, { status });
-    return result.affected;
+    const result = await this.tasksRepository.updateStatusBulk(taskIds, status);
+    return result;
   }
   async batchRemove(taskIds: string[]): Promise<number | undefined | null> {
-    const result = await this.tasksRepository.delete({ id: In(taskIds) });
-    return result.affected;
+    const result = await this.tasksRepository.deleteByIds(taskIds);
+    return result;
   }
 }
