@@ -90,11 +90,9 @@ export class TaskProcessorService extends WorkerHost {
       return { success: false, error: `Invalid status value: ${status}`, jobId: job.id };
     }
 
-    // Transaction handling placeholder (implement with your DB/ORM)
+    // no need to use transactions we just updating once and no task dependent to previous
     try {
-      // await this.tasksService.startTransaction();
       const task = await this.tasksCommandService.updateStatus(taskId, status);
-      // await this.tasksService.commitTransaction();
 
       return {
         success: true,
@@ -119,7 +117,7 @@ export class TaskProcessorService extends WorkerHost {
     this.logger.debug('Processing overdue tasks notification');
 
     try {
-      // Example: Fetch overdue tasks in chunks
+      // Fetch overdue tasks in chunks
       let page = 0;
       const limit = 100;
       let hasMore = true;
