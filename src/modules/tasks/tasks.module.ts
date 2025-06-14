@@ -9,6 +9,7 @@ import * as redisStore from 'cache-manager-ioredis';
 import { TaskCommandService } from './services/task-command.service';
 import { TaskQueryService } from './services/task-query.service';
 import { TaskRepository } from './repository/tasks.repository';
+import { AuthModule } from '@modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { TaskRepository } from './repository/tasks.repository';
         ttl: 60,
       }),
     }),
+    AuthModule,
   ],
   controllers: [TasksController],
   providers: [

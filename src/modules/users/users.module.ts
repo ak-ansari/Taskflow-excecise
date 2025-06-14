@@ -5,24 +5,10 @@ import { UsersController } from './users.controller';
 import { User } from './entities/user.entity';
 import { UsersRepository } from './repository/users.repository';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
-import { JwtModule, JwtService } from '@nestjs/jwt';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { JwtStrategy } from '@modules/auth/strategies/jwt.strategy';
+import { JwtService } from '@nestjs/jwt';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([User]),
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.get('jwt.secret'),
-        signOptions: {
-          expiresIn: configService.get('jwt.expiresIn'),
-        },
-      }),
-    }),
-  ],
+  imports: [TypeOrmModule.forFeature([User])],
   controllers: [UsersController],
   providers: [
     UsersService,
