@@ -8,7 +8,7 @@ import { UpdateUserDto } from '../dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
-export class UserRepository implements IUsersRepository {
+export class UsersRepository implements IUsersRepository {
   constructor(@InjectRepository(User) private repo: Repository<User>) {}
   findById(id: string): Promise<User | null> {
     return this.repo.findOne({ where: { id } });
