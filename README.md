@@ -1,10 +1,18 @@
-# TaskFlow API - Senior Backend Engineer Coding Challenge
+# TaskFlow API - My Journey
 
 ## Introduction
 
-Welcome to the TaskFlow API coding challenge! This project is designed to evaluate the skills of experienced backend engineers in identifying and solving complex architectural problems using our technology stack.
+As i gone through the code base in my understanding it is a api server to manage user's tasks. user can perform following actions.
 
-The TaskFlow API is a task management system with significant scalability, performance, and security challenges that need to be addressed. The codebase contains intentional anti-patterns and inefficiencies that require thoughtful refactoring and architectural improvements.
+1. Register himself by providing unique email and password (not sure admin going to add user or user himself).
+
+2. User can login using email and password.
+
+3. User can add, update, delete, read his tasks after login only.
+
+4. User can perform batch operations on tasks.
+
+5. Scheduler is there to do some process automatically.
 
 ## Tech Stack
 
@@ -16,174 +24,75 @@ The TaskFlow API is a task management system with significant scalability, perfo
 - **Package Manager**: Bun
 - **Testing**: Bun test
 
-## Getting Started
+## My Findings
 
-### Prerequisites
+1. Improper dependency structure.
+2. Apis are performing in memory filter and manual updates.
+3. No Proper logging mechanism.
+4. No Proper error handling.
+5. No access control and security mechanism.
+6. Anti Repository pattern (services directly interacting with databases)
+7. In memory cache witch would not scale with multi instance deployment.
 
-- Node.js (v16+)
-- Bun (latest version)
-- PostgreSQL
-- Redis
+## What I Improved
 
-### Setup Instructions
+### 1. Performance & Scalability
 
-1. Clone this repository
-2. Install dependencies:
-   ```bash
-   bun install
-   ```
-3. Configure environment variables by copying `.env.example` to `.env`:
-   ```bash
-   cp .env.example .env
-   # Update the .env file with your database and Redis connection details
-   ```
-4. Database Setup:
-   
-   Ensure your PostgreSQL database is running, then create a database:
-   ```bash
-   # Using psql
-   psql -U postgres
-   CREATE DATABASE taskflow;
-   \q
-   
-   # Or using createdb
-   createdb -U postgres taskflow
-   ```
-   
-   Build the TypeScript files to ensure the migrations can be run:
-   ```bash
-   bun run build
-   ```
-
-5. Run database migrations:
-   ```bash
-   # Option 1: Standard migration (if "No migrations are pending" but tables aren't created)
-   bun run migration:run
-   
-   # Option 2: Force table creation with our custom script
-   bun run migration:custom
-   ```
-   
-   Our custom migration script will:
-   - Try to run formal migrations first
-   - If no migrations are executed, it will directly create the necessary tables
-   - It provides detailed logging to help troubleshoot database setup issues
-
-6. Seed the database with initial data:
-   ```bash
-   bun run seed
-   ```
-   
-7. Start the development server:
-   ```bash
-   bun run start:dev
-   ```
-
-### Troubleshooting Database Issues
-
-If you continue to have issues with database connections:
-
-1. Check that PostgreSQL is properly installed and running:
-   ```bash
-   # On Linux/Mac
-   systemctl status postgresql
-   # or
-   pg_isready
-   
-   # On Windows
-   sc query postgresql
-   ```
-
-2. Verify your database credentials by connecting manually:
-   ```bash
-   psql -h localhost -U postgres -d taskflow
-   ```
-
-3. If needed, manually create the schema from the migration files:
-   - Look at the SQL in `src/database/migrations/`
-   - Execute the SQL manually in your database
-
-### Default Users
-
-The seeded database includes two users:
-
-1. Admin User:
-   - Email: admin@example.com
-   - Password: admin123
-   - Role: admin
-
-2. Regular User:
-   - Email: user@example.com
-   - Password: user123
-   - Role: user
-
-## Challenge Overview
-
-This codebase contains a partially implemented task management API that suffers from various architectural, performance, and security issues. Your task is to analyze, refactor, and enhance the codebase to create a production-ready, scalable, and secure application.
-
-## Core Problem Areas
-
-The codebase has been intentionally implemented with several critical issues that need to be addressed:
-
-### 1. Performance & Scalability Issues
-
-- N+1 query problems throughout the application
-- Inefficient in-memory filtering and pagination that won't scale
-- Excessive database roundtrips in batch operations
-- Poorly optimized data access patterns
+- Optimized query by quiring with manager (N+1 query problems throughout the application )
+- Optimized API by getting desired result from query it self with help of COUNT query with conditions (Inefficient in-memory filtering and pagination that won't scale)
+- Ridoff database roundtrips (Excessive database roundtrips in batch operations)
+- Used transactions and manager pattern for data access (Poorly optimized data access patterns)
 
 ### 2. Architectural Weaknesses
 
-- Inappropriate separation of concerns (e.g., controllers directly using repositories)
-- Missing domain abstractions and service boundaries
-- Lack of transaction management for multi-step operations
-- Tightly coupled components with high interdependency
+- Implemented repository pattern service is only do business logic and database logic will be isolated inside the repository class makes the app database independent (Inappropriate separation of concerns (e.g., controllers directly using repositories))
+- Implemented and refactored the code according to domain driven architecture (Missing domain abstractions and service boundaries)
+- Used proper transactions to make sure consistency and role back on error (Lack of transaction management for multi-step operations)
+- Segregated the domain specific logic to appropriate service (Tightly coupled components with high interdependency)
 
 ### 3. Security Vulnerabilities
 
-- Inadequate authentication mechanism with several vulnerabilities
-- Improper authorization checks that can be bypassed
-- Unprotected sensitive data exposure in error responses
-- Insecure rate limiting implementation
+- Improved auth module for secure access with implemented jwt strategy and appropriate guards (Inadequate authentication mechanism with several vulnerabilities)
+- Handled authorization checks in roles guard (Improper authorization checks that can be bypassed) \\ i am not sure where to strictly use admin role and where user not found in instruction thats why i leave it as it is but i can implement if someone tell me about it
+- Changes in error messages which is exposing critical information in errors (Unprotected sensitive data exposure in error responses)
+- Added rate limiter guard in global for secure rate limiting (Insecure rate limiting implementation)
 
 ### 4. Reliability & Resilience Gaps
 
-- Ineffective error handling strategies
-- Missing retry mechanisms for distributed operations
-- Lack of graceful degradation capabilities
-- In-memory caching that fails in distributed environments
+- Added exception filter to handle exceptions in global (Ineffective error handling strategies)
+- Using bull mq which automatically handles retry according to provided configuration(Missing retry mechanisms for distributed operations)
+- implemented in cache service if error occur while accessing cache it will return null hence it will be treated a cache miss same we can implement for queue but then we have to write our repository to interact with queues (Lack of graceful degradation capabilities)
+- Implemented redis based caching (In-memory caching that fails in distributed environments)
 
-## Implementation Requirements
-
-Your implementation should address the following areas:
+## Implementation
 
 ### 1. Performance Optimization
 
-- Implement efficient database query strategies with proper joins and eager loading
-- Create a performant filtering and pagination system
-- Optimize batch operations with bulk database operations
-- Add appropriate indexing strategies
+- Optimized queries with joins and index to get desired from query itself in optimized manner (Implement efficient database query strategies with proper joins and eager loading)
+- Created paginated query system with search and filter support for findAllTasks api (Create a performant filtering and pagination system)
+- Optimized batch processing logic by bulk operations. divided task into small size chunks (Optimize batch operations with bulk database operations)
+- Added index on frequently queried columns like userId, status, priority for task entity (Add appropriate indexing strategies)
 
 ### 2. Architectural Improvements
 
-- Implement proper domain separation and service abstractions
-- Create a consistent transaction management strategy
-- Apply SOLID principles throughout the codebase
-- Implement at least one advanced pattern (e.g., CQRS, Event Sourcing)
+- Implemented proper domain separation and service abstractions
+- Created a consistent transaction management strategy
+- Applied SOLID principles throughout the codebase
+- Implemented CQRS advanced pattern in task module, 
 
 ### 3. Security Enhancements
 
-- Strengthen authentication with refresh token rotation
-- Implement proper authorization checks at multiple levels
-- Create a secure rate limiting system
-- Add data validation and sanitization
+- Added refresh token rotation strategy with database security by saving hashed value of refresh token (Strengthen authentication with refresh token rotation)
+- Implemented role based authorization with the help of roles guard (Implement proper authorization checks at multiple levels) // no clarity where to restrict user
+- Created a comprehensive rate limiting guard (Create a secure rate limiting system)
+- Added dtos for data validation and data is sensitized when updating (Add data validation and sanitization)
 
 ### 4. Resilience & Observability
 
-- Implement comprehensive error handling and recovery mechanisms
-- Add proper logging with contextual information
-- Create meaningful health checks
-- Implement at least one observability pattern
+- Added global exception filter (Implement comprehensive error handling and recovery mechanisms)
+- Added logging interceptor (Add proper logging with contextual information)
+- Added health check with termines (Create meaningful health checks)
+- Added logger to observe access and logs . used pino for pretty and consistent logs (Implement at least one observability pattern)
 
 ## Advanced Challenge Areas
 
@@ -191,64 +100,18 @@ For senior engineers, we expect solutions to also address:
 
 ### 1. Distributed Systems Design
 
-- Create solutions that work correctly in multi-instance deployments
-- Implement proper distributed caching with invalidation strategies
-- Handle concurrent operations safely
-- Design for horizontal scaling
+- Current solution is supports multi instance deployment because
+ 1. redis is used as cache i.e one centered cache for all instances. 
+ 2. Transactions is used for multi queries to ensure consistency.
+ 3. Rate limiter also designed to work in distributed environment.
+ (Create solutions that work correctly in multi-instance deployments)
+- Implemented redis based caching (Implement proper distributed caching with invalidation strategies)
+- Using transactions  (Handle concurrent operations safely)
+- Designed for horizontal scaling
 
-### 2. System Reliability
+### 2. Performance Under Load
 
-- Implement circuit breakers for external service calls
-- Create graceful degradation pathways for non-critical features
-- Add self-healing mechanisms
-- Design fault isolation boundaries
-
-### 3. Performance Under Load
-
-- Optimize for high throughput scenarios
-- Implement backpressure mechanisms
-- Create efficient resource utilization strategies
-- Design for predictable performance under varying loads
-
-## Evaluation Criteria
-
-Your solution will be evaluated on:
-
-1. **Problem Analysis**: How well you identify and prioritize the core issues
-2. **Technical Implementation**: The quality and cleanliness of your code
-3. **Architectural Thinking**: Your approach to solving complex design problems
-4. **Performance Improvements**: Measurable enhancements to system performance
-5. **Security Awareness**: Your identification and remediation of vulnerabilities
-6. **Testing Strategy**: The comprehensiveness of your test coverage
-7. **Documentation**: The clarity of your explanation of key decisions
-
-## Submission Guidelines
-
-1. Fork this repository to your own GitHub account
-2. Make regular, meaningful commits that tell a story
-3. Create a comprehensive README.md in your forked repository containing:
-   - Analysis of the core problems you identified
-   - Overview of your architectural approach
-   - Performance and security improvements made
-   - Key technical decisions and their rationale
-   - Any tradeoffs you made and why
-4. Ensure your repository is public so we can review your work
-5. Submit the link to your public GitHub repository
-
-## API Endpoints
-
-The API should expose the following endpoints:
-
-### Authentication
-- `POST /auth/login` - Authenticate a user
-- `POST /auth/register` - Register a new user
-
-### Tasks
-- `GET /tasks` - List tasks with filtering and pagination
-- `GET /tasks/:id` - Get task details
-- `POST /tasks` - Create a task
-- `PATCH /tasks/:id` - Update a task
-- `DELETE /tasks/:id` - Delete a task
-- `POST /tasks/batch` - Batch operations on tasks
-
-Good luck! This challenge is designed to test the skills of experienced engineers in creating scalable, maintainable, and secure systems.
+- Optimized for high throughput scenarios
+- Implemented backpressure mechanisms
+- Created efficient resource utilization strategies
+- Designed for predictable performance under varying loads
