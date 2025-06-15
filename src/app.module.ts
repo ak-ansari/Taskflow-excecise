@@ -11,6 +11,7 @@ import { TaskProcessorModule } from './queues/task-processor/task-processor.modu
 import { ScheduledTasksModule } from './queues/scheduled-tasks/scheduled-tasks.module';
 import jwtConfig from '@config/jwt.config';
 import { DevtoolsModule } from '@nestjs/devtools-integration';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -75,6 +76,7 @@ import { DevtoolsModule } from '@nestjs/devtools-integration';
     // Queue processing modules
     TaskProcessorModule,
     ScheduledTasksModule,
+    HealthModule,
   ],
   providers: [],
   exports: [],

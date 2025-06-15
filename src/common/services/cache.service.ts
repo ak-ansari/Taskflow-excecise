@@ -1,10 +1,11 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 
 @Injectable()
 export class CacheService {
   private readonly namespacePrefix = 'app:';
+  private readonly logger = new Logger();
 
   constructor(@Inject(CACHE_MANAGER) private readonly cacheManager: Cache) {}
 
@@ -14,9 +15,14 @@ export class CacheService {
   }
 
   async get<T>(key: string): Promise<T | null> {
-    const namespacedKey = this.namespaced(key);
-    const result = await this.cacheManager.get<T>(namespacedKey);
-    return result ?? null;
+    try {
+      const namespacedKey = this.namespaced(key);
+      const result = await this.cacheManager.get<T>(namespacedKey);
+      return result ?? null;
+    } catch (error) {
+      Logger.error(`Error while reading ${key} from cache`);
+      return null; // return null it will be treated as cache miss
+    }
   }
 
   async delete(key: string): Promise<boolean> {

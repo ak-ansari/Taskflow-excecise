@@ -26,6 +26,8 @@ import { BatchResult } from './types/tasks.interface';
 import { TaskQueryService } from './services/task-query.service';
 import { TaskCommandService } from './services/task-command.service';
 import { JwtAuthGuard } from '@modules/auth/guards/jwt-auth.guard';
+import { Roles } from '@common/decorators/roles.decorator';
+import { RolesGuard } from '@common/guards/roles.guard';
 
 @ApiTags('tasks')
 @Controller('tasks')
@@ -65,6 +67,8 @@ export class TasksController {
 
   @Get('stats')
   @ApiOperation({ summary: 'Get task statistics' })
+  @Roles('admin')
+  @UseGuards(RolesGuard) // only admin can access this route
   async getStats() {
     return this.tasksQueryService.getStatics();
   }
