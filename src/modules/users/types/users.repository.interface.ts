@@ -9,4 +9,5 @@ export interface IUsersRepository {
   save(user: CreateUserDto): Promise<User>;
   findAll(): Promise<User[]>;
   update(id: string, updateUserDto: UpdateUserDto): Promise<User>;
+  saveRefreshToken(id: string, token: string | undefined): Promise<void>;
 }

@@ -37,4 +37,8 @@ export class UsersRepository implements IUsersRepository {
     this.repo.merge(user as User, updateUserDto);
     return this.repo.save(user as User);
   }
+  async saveRefreshToken(id: string, token: string | undefined): Promise<void> {
+    await this.repo.update(id, { refreshToken: token });
+    return;
+  }
 }

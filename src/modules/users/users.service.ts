@@ -40,4 +40,7 @@ export class UsersService {
   async remove(id: string): Promise<void> {
     return this.usersRepository.deleteById(id);
   }
+  async saveRefreshToken(id: string, token: string | undefined): Promise<void> {
+    return this.usersRepository.saveRefreshToken(id, token);
+  }
 }
