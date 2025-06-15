@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ApiTags } from '@nestjs/swagger';
+import { RefreshDto } from './dto/refresh.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -17,5 +18,11 @@ export class AuthController {
   @Post('register')
   register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
+  }
+  // auth.controller.ts
+  @Post('refresh')
+  async refresh(@Body() refreshDto: RefreshDto) {
+    const { refreshToken } = refreshDto;
+    return this.authService.refreshTokens(refreshToken);
   }
 }

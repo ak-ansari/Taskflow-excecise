@@ -10,6 +10,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { TaskProcessorModule } from './queues/task-processor/task-processor.module';
 import { ScheduledTasksModule } from './queues/scheduled-tasks/scheduled-tasks.module';
 import jwtConfig from '@config/jwt.config';
+import { DevtoolsModule } from '@nestjs/devtools-integration';
 
 @Module({
   imports: [
@@ -17,6 +18,9 @@ import jwtConfig from '@config/jwt.config';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [jwtConfig],
+    }),
+    DevtoolsModule.register({
+      http: process.env.NODE_ENV !== 'production',
     }),
 
     // Database

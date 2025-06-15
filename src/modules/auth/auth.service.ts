@@ -34,7 +34,7 @@ export class AuthService {
       email: user.email,
       role: user.role,
     };
-    const accessToken = this.jwtService.sign(payload);
+    const accessToken = this.jwtService.sign(payload, this.accessTokenOption);
     const refreshToken = this.jwtService.sign({ sub: user.id }, this.refreshTokenOption); // sign a lightweight refresh token only with {id: string}
     const tokenHash = await bcrypt.hash(refreshToken, 10);
     await this.usersService.saveRefreshToken(user.id, tokenHash);
@@ -90,17 +90,23 @@ export class AuthService {
   async validateUserRoles(userId: string, requiredRoles: string[]): Promise<boolean> {
     return true;
   }
-  async refreshTokens(id: string, oldRefreshToken: string) {
-    const user = await this.usersService.findOne(id);
+  async refreshTokens(token: string) {
+    const payload = this.jwtService.verify(token, this.refreshTokenOption);
+    if (!payload) {
+      throw new UnauthorizedException('Invalid Token');
+    }
+    const user = await this.usersService.findOne(payload.sub);
     if (!user || !user.refreshToken) throw new ForbiddenException();
 
-    const isValid = await bcrypt.compare(oldRefreshToken, user.refreshToken);
+    const isValid = await bcrypt.compare(token, user.refreshToken);
     if (!isValid) {
       await this.usersService.saveRefreshToken(user.id, undefined); // Invalidate all
       throw new ForbiddenException('Token reuse detected');
     }
-    const accessToken = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role });
-
+    const accessToken = this.jwtService.sign(
+      { sub: user.id, email: user.email, role: user.role },
+      this.accessTokenOption,
+    );
     const refreshToken = this.jwtService.sign({ sub: user.id }, this.refreshTokenOption);
 
     const tokenHash = await bcrypt.hash(refreshToken, 10);
@@ -113,6 +119,12 @@ export class AuthService {
     return {
       secret: this.configService.get('jwt.refreshSecret'),
       expiresIn: this.configService.get('jwt.refreshExpiresIn'),
+    };
+  }
+  private get accessTokenOption(): JwtSignOptions {
+    return {
+      secret: this.configService.get('jwt.secret'),
+      expiresIn: this.configService.get('jwt.expiresIn'),
     };
   }
 }
