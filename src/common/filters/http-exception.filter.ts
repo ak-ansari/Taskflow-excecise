@@ -7,10 +7,13 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { PinoLogger } from 'nestjs-pino';
 
 @Catch(HttpException)
 export class HttpExceptionFilter implements ExceptionFilter {
-  private readonly logger = new Logger(HttpExceptionFilter.name);
+  constructor(private readonly logger: PinoLogger) {
+    this.logger.setContext('HttpExceptionFilter');
+  }
 
   catch(exception: HttpException, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
@@ -44,7 +47,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     } else if (status >= 400) {
       this.logger.warn(`HTTP ${status} Warning: ${message}`, HttpExceptionFilter.name);
     } else {
-      this.logger.log(`HTTP ${status}: ${message}`, HttpExceptionFilter.name);
+      this.logger.info(`HTTP ${status}: ${message}`, HttpExceptionFilter.name);
     }
 
     // Consistent error response

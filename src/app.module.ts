@@ -12,9 +12,24 @@ import { ScheduledTasksModule } from './queues/scheduled-tasks/scheduled-tasks.m
 import jwtConfig from '@config/jwt.config';
 import { DevtoolsModule } from '@nestjs/devtools-integration';
 import { HealthModule } from './modules/health/health.module';
+import { LoggerModule } from 'nestjs-pino';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { LoggingInterceptor } from '@common/interceptors/logging.interceptor';
+import { ResponseInterceptor } from '@common/interceptors/response.interceptor';
 
 @Module({
   imports: [
+    //logger module
+    LoggerModule.forRoot({
+      pinoHttp: {
+        transport: {
+          target: 'pino-pretty',
+          options: {
+            colorize: true,
+          },
+        },
+      },
+    }),
     // Configuration
     ConfigModule.forRoot({
       isGlobal: true,
@@ -78,7 +93,16 @@ import { HealthModule } from './modules/health/health.module';
     ScheduledTasksModule,
     HealthModule,
   ],
-  providers: [],
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: LoggingInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ResponseInterceptor,
+    },
+  ],
   exports: [],
 })
 export class AppModule {}

@@ -2,8 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { LoggingInterceptor } from '@common/interceptors/logging.interceptor';
-import { ResponseInterceptor } from '@common/interceptors/response.interceptor';
+import { Logger } from 'nestjs-pino';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { snapshot: true });
@@ -19,8 +18,7 @@ async function bootstrap() {
       },
     }),
   );
-  app.useGlobalInterceptors(new LoggingInterceptor());
-  app.useGlobalInterceptors(new ResponseInterceptor());
+  app.useLogger(app.get(Logger));
 
   // CORS
   app.enableCors();

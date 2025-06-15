@@ -1,13 +1,18 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
+import { PinoLogger } from 'nestjs-pino';
 
 @Injectable()
 export class CacheService {
   private readonly namespacePrefix = 'app:';
-  private readonly logger = new Logger();
 
-  constructor(@Inject(CACHE_MANAGER) private readonly cacheManager: Cache) {}
+  constructor(
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+    private readonly logger: PinoLogger,
+  ) {
+    this.logger.setContext('CacheService');
+  }
 
   async set<T>(key: string, value: T, ttlSeconds = 300): Promise<void> {
     const namespacedKey = this.namespaced(key);

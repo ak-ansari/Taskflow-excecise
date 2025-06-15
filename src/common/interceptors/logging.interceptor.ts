@@ -1,10 +1,13 @@
 import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Logger } from '@nestjs/common';
+import { PinoLogger } from 'nestjs-pino';
 import { Observable } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
-  private readonly logger = new Logger(LoggingInterceptor.name);
+  constructor(private readonly logger: PinoLogger) {
+    this.logger.setContext('LoggingInterceptor');
+  }
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const req = context.switchToHttp().getRequest();
@@ -15,13 +18,13 @@ export class LoggingInterceptor implements NestInterceptor {
     const now = Date.now();
 
     // Log incoming request (excluding sensitive data)
-    this.logger.log(`Incoming Request: ${method} ${url} | User: ${user} | IP: ${ip}`);
+    this.logger.info(`Incoming Request: ${method} ${url} | User: ${user} | IP: ${ip}`);
 
     return next.handle().pipe(
       tap({
         next: response => {
           // Optionally, you can log response size: JSON.stringify(response).length
-          this.logger.log(
+          this.logger.info(
             `Outgoing Response: ${method} ${url} | User: ${user} | ${Date.now() - now}ms`,
           );
         },

@@ -5,17 +5,19 @@ import { Queue } from 'bullmq';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Task } from '../../modules/tasks/entities/task.entity';
 import { TaskQueryService } from '@modules/tasks/services/task-query.service';
+import { PinoLogger } from 'nestjs-pino';
 
 @Injectable()
 export class OverdueTasksService {
-  private readonly logger = new Logger(OverdueTasksService.name);
-
   constructor(
     @InjectQueue('task-processing')
     private taskQueue: Queue,
     @InjectRepository(Task)
     private taskQueryService: TaskQueryService,
-  ) {}
+    private readonly logger: PinoLogger,
+  ) {
+    this.logger.setContext('OverdueTasksService');
+  }
 
   // TODO: Implement the overdue tasks checker
   // This method should run every hour and check for overdue tasks
@@ -29,7 +31,7 @@ export class OverdueTasksService {
     // 3. Log the number of overdue tasks found
     const overdueTasks = await this.taskQueryService.getOverdueTasks();
 
-    this.logger.log(`Found ${overdueTasks.length} overdue tasks`);
+    this.logger.info(`Found ${overdueTasks.length} overdue tasks`);
 
     // Add tasks to the queue to be processed
     const mappedTasks = overdueTasks.map(task => ({

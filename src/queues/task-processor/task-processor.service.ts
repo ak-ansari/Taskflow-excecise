@@ -3,6 +3,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { TaskQueryService } from '@modules/tasks/services/task-query.service';
 import { TaskCommandService } from '@modules/tasks/services/task-command.service';
+import { PinoLogger } from 'nestjs-pino';
 
 const DEFAULT_BATCH_SIZE = 10;
 const DEFAULT_MAX_RETRIES = 3;
@@ -12,13 +13,13 @@ const VALID_STATUSES = ['pending', 'in-progress', 'completed', 'overdue']; // Ex
 @Injectable()
 @Processor('task-processing')
 export class TaskProcessorService extends WorkerHost {
-  private readonly logger = new Logger(TaskProcessorService.name);
-
   constructor(
     private readonly tasksQueryService: TaskQueryService,
     private readonly tasksCommandService: TaskCommandService,
+    private readonly logger: PinoLogger,
   ) {
     super();
+    this.logger.setContext('TaskProcessorService');
   }
 
   // Batch processing with retries and concurrency control
@@ -134,7 +135,7 @@ export class TaskProcessorService extends WorkerHost {
         await Promise.all(
           overdueTasks.map(async task => {
             try {
-              this.logger.log(`Sending notification for taskId ${task.id}`);
+              this.logger.info(`Sending notification for taskId ${task.id}`);
               processedCount++;
             } catch (err) {
               this.logger.error(
