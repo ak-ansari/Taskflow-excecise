@@ -14,6 +14,7 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
+  // to login user with credentials
   async login(loginDto: LoginDto) {
     const { email, password } = loginDto;
 
@@ -34,8 +35,8 @@ export class AuthService {
       email: user.email,
       role: user.role,
     };
-    const accessToken = this.jwtService.sign(payload, this.accessTokenOption);
-    const refreshToken = this.jwtService.sign({ sub: user.id }, this.refreshTokenOption); // sign a lightweight refresh token only with {id: string}
+    const accessToken = this.signAccessToken(payload);
+    const refreshToken = this.signRefreshToken({ sub: user.id }); // sign a lightweight refresh token only with {id: string}
     const tokenHash = await bcrypt.hash(refreshToken, 10);
     await this.usersService.saveRefreshToken(user.id, tokenHash);
 
@@ -50,6 +51,7 @@ export class AuthService {
     };
   }
 
+  // register new user
   async register(registerDto: RegisterDto) {
     const existingUser = await this.usersService.findByEmail(registerDto.email);
 
@@ -59,7 +61,10 @@ export class AuthService {
 
     const user = await this.usersService.create(registerDto);
 
-    const token = this.generateToken(user.id);
+    const token = this.signAccessToken({ sub: user.id, email: user.email, role: user.role });
+    const refreshToken = this.signRefreshToken({ sub: user.id });
+    const tokenHash = await bcrypt.hash(refreshToken, 10);
+    await this.usersService.saveRefreshToken(user.id, tokenHash);
 
     return {
       user: {
@@ -69,12 +74,8 @@ export class AuthService {
         role: user.role,
       },
       token,
+      refreshToken,
     };
-  }
-
-  private generateToken(userId: string) {
-    const payload = { sub: userId };
-    return this.jwtService.sign(payload);
   }
 
   async validateUser(userId: string): Promise<any> {
@@ -88,8 +89,12 @@ export class AuthService {
   }
 
   async validateUserRoles(userId: string, requiredRoles: string[]): Promise<boolean> {
-    return true;
+    const user = await this.usersService.findOne(userId);
+    const role = user?.role;
+    if (!role) return false;
+    return requiredRoles.includes(role);
   }
+  // acquire a access token silently
   async refreshTokens(token: string) {
     const payload = this.jwtService.verify(token, this.refreshTokenOption);
     if (!payload) {
@@ -103,11 +108,8 @@ export class AuthService {
       await this.usersService.saveRefreshToken(user.id, undefined); // Invalidate all
       throw new ForbiddenException('Token reuse detected');
     }
-    const accessToken = this.jwtService.sign(
-      { sub: user.id, email: user.email, role: user.role },
-      this.accessTokenOption,
-    );
-    const refreshToken = this.jwtService.sign({ sub: user.id }, this.refreshTokenOption);
+    const accessToken = this.signAccessToken({ sub: user.id, email: user.email, role: user.role });
+    const refreshToken = this.signRefreshToken({ sub: user.id });
 
     const tokenHash = await bcrypt.hash(refreshToken, 10);
     await this.usersService.saveRefreshToken(user.id, tokenHash);
@@ -115,6 +117,12 @@ export class AuthService {
     return { accessToken, refreshToken: refreshToken };
   }
 
+  public signAccessToken(payload: Record<string, unknown>) {
+    return this.jwtService.sign(payload, this.accessTokenOption);
+  }
+  private signRefreshToken(payload: Record<string, unknown>) {
+    return this.jwtService.sign(payload, this.refreshTokenOption);
+  }
   private get refreshTokenOption(): JwtSignOptions {
     return {
       secret: this.configService.get('jwt.refreshSecret'),

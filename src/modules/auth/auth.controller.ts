@@ -19,7 +19,7 @@ export class AuthController {
   register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
   }
-  // auth.controller.ts
+
   @Post('refresh')
   async refresh(@Body() refreshDto: RefreshDto) {
     const { refreshToken } = refreshDto;
