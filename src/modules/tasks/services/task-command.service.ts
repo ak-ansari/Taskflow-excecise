@@ -7,6 +7,8 @@ import { UpdateTaskDto } from '../dto/update-task.dto';
 import { Task } from '../entities/task.entity';
 import { TaskStatus } from '../enums/task-status.enum';
 import { ITaskRepository } from '../types/tasks-repositoy.interface';
+import { CACHE_MANAGER, Cache, CacheKey } from '@nestjs/cache-manager';
+import { TaskCacheKey } from '../enums/task-cache-key.enum';
 
 @Injectable()
 export class TaskCommandService {
@@ -16,6 +18,7 @@ export class TaskCommandService {
     @InjectQueue('task-processing')
     private taskQueue: Queue,
     private dataSource: DataSource,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async create(createTaskDto: CreateTaskDto): Promise<Task> {
@@ -67,6 +70,8 @@ export class TaskCommandService {
           throw new HttpException('Failed to update task', 500);
         }
       }
+      const key = TaskCacheKey.TASK_WITH_ID + id;
+      await this.cacheManager.del(key); // invalidate task cache on update
 
       return updatedTask;
     });
@@ -78,6 +83,8 @@ export class TaskCommandService {
     if (result === 0) {
       throw new NotFoundException(`Task with ID ${id} not found`);
     }
+    const key = TaskCacheKey.TASK_WITH_ID + id;
+    await this.cacheManager.del(key); // invalidate task cache on update
   }
 
   async updateStatus(id: string, status: string): Promise<Task> {
@@ -87,15 +94,25 @@ export class TaskCommandService {
       throw new NotFoundException(`Task With Id ${id} not found`);
     }
     task.status = status as TaskStatus;
-    return this.tasksRepository.create(task);
+    const result = await this.tasksRepository.create(task);
+
+    const key = TaskCacheKey.TASK_WITH_ID + id;
+    await this.cacheManager.del(key); // invalidate task cache on update
+    return result;
   }
 
   async batchUpdateStatus(taskIds: string[], status: TaskStatus): Promise<number | undefined> {
     const result = await this.tasksRepository.updateStatusBulk(taskIds, status);
+    for (const id of taskIds) {
+      await this.cacheManager.del(TaskCacheKey.TASK_WITH_ID + id);
+    }
     return result;
   }
   async batchRemove(taskIds: string[]): Promise<number | undefined | null> {
     const result = await this.tasksRepository.deleteByIds(taskIds);
+    for (const id of taskIds) {
+      await this.cacheManager.del(TaskCacheKey.TASK_WITH_ID + id);
+    }
     return result;
   }
 }
